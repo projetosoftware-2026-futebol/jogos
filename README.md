@@ -1,6 +1,6 @@
 # jogos
 
-API de Jogos — microserviço em Python (FastAPI) para registrar partidas entre clubes e atualizar o placar.
+API de Jogos — microserviço em Python (FastAPI) para registrar partidas concluídas entre clubes.
 
 ## Modelo
 
@@ -8,31 +8,29 @@ API de Jogos — microserviço em Python (FastAPI) para registrar partidas entre
 JOGO
 - id: str
 - times: { id_clube: pontos }
-- status: scheduled | playing | finished
 ```
+
+Toda partida é registrada já concluída — não há estado de "em andamento".
 
 ## Endpoints
 
-| Método | Rota                    | Descrição                          |
-|--------|-------------------------|------------------------------------|
-| GET    | `/jogos`                | Lista todos os jogos               |
-| GET    | `/jogos/{id}`           | Busca um jogo pelo id              |
-| GET    | `/jogos/{id}/score`     | Retorna o placar atual             |
-| POST   | `/jogos/play`           | Cria um novo jogo entre dois times |
-| POST   | `/jogos/{id}/score`     | Registra pontos para um time       |
-| POST   | `/jogos/{id}/finish`    | Finaliza um jogo                   |
-| GET    | `/health`               | Health check                       |
+| Método | Rota                  | Descrição                                       |
+|--------|-----------------------|-------------------------------------------------|
+| GET    | `/jogos`              | Lista todos os jogos                            |
+| GET    | `/jogos/{id}`         | Busca um jogo pelo id                           |
+| GET    | `/jogos/{id}/score`   | Retorna o placar                                |
+| POST   | `/jogos/play`         | Registra uma nova partida concluída             |
+| GET    | `/health`             | Health check                                    |
 
-### Payloads
+### Payload de `POST /jogos/play`
 
-`POST /jogos/play`
 ```json
-{ "time_a": "<id_clube_a>", "time_b": "<id_clube_b>" }
-```
-
-`POST /jogos/{id}/score`
-```json
-{ "time": "<id_clube>", "pontos": 1 }
+{
+  "time_a": "<id_clube_a>",
+  "pontos_a": 2,
+  "time_b": "<id_clube_b>",
+  "pontos_b": 1
+}
 ```
 
 ## Como rodar
@@ -50,27 +48,22 @@ Documentação interativa: http://localhost:8002/docs
 ## Exemplos com curl
 
 ```bash
-# criar partida
+# registrar partida concluída
 curl -X POST http://localhost:8002/jogos/play \
      -H "Content-Type: application/json" \
-     -d '{"time_a":"flamengo","time_b":"vasco"}'
-
-# marcar gol
-curl -X POST http://localhost:8002/jogos/<id>/score \
-     -H "Content-Type: application/json" \
-     -d '{"time":"flamengo","pontos":1}'
+     -d '{"time_a":"flamengo","pontos_a":2,"time_b":"vasco","pontos_b":1}'
 
 # ver placar
 curl http://localhost:8002/jogos/<id>/score
 
-# finalizar
-curl -X POST http://localhost:8002/jogos/<id>/finish
+# listar
+curl http://localhost:8002/jogos
 ```
 
 ## Arquitetura
 
-- `models.py` — schemas Pydantic (`Jogo`, `PlayRequest`, `ScoreRequest`, `Status`).
-- `store.py` — estado em memória + funções puras (`create_jogo`, `add_score`, `finish_jogo`, ...).
+- `models.py` — schemas Pydantic (`Jogo`, `PlayRequest`).
+- `store.py` — estado em memória + funções puras (`create_jogo`, `list_jogos`, `get_jogo`).
 - `main.py` — rotas FastAPI; cada handler é uma função que delega para o store.
 
-Estilo funcional: sem classes de domínio com lógica; mutação concentrada no `store` e modelos atualizados via `model_copy`.
+Estilo funcional: sem classes de domínio com lógica; mutação concentrada no `store`.

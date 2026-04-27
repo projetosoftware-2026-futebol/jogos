@@ -7,7 +7,7 @@ class-based logic.
 from typing import Dict, List, Optional
 from uuid import uuid4
 
-from models import Jogo, Status
+from models import Jogo
 
 
 _jogos: Dict[str, Jogo] = {}
@@ -21,42 +21,18 @@ def get_jogo(jogo_id: str) -> Optional[Jogo]:
     return _jogos.get(jogo_id)
 
 
-def create_jogo(time_a: str, time_b: str) -> Jogo:
+def create_jogo(time_a: str, pontos_a: int, time_b: str, pontos_b: int) -> Jogo:
     if time_a == time_b:
         raise ValueError("Os dois times devem ser diferentes")
+    if pontos_a < 0 or pontos_b < 0:
+        raise ValueError("Pontos não podem ser negativos")
+
     jogo = Jogo(
         id=str(uuid4()),
-        times={time_a: 0, time_b: 0},
-        status=Status.PLAYING,
+        times={time_a: pontos_a, time_b: pontos_b},
     )
     _jogos[jogo.id] = jogo
     return jogo
-
-
-def add_score(jogo_id: str, time: str, pontos: int) -> Jogo:
-    jogo = _jogos.get(jogo_id)
-    if jogo is None:
-        raise KeyError(jogo_id)
-    if jogo.status == Status.FINISHED:
-        raise ValueError("Jogo já finalizado")
-    if time not in jogo.times:
-        raise ValueError(f"Time '{time}' não participa deste jogo")
-    if pontos <= 0:
-        raise ValueError("Pontos devem ser positivos")
-
-    novos_times = {**jogo.times, time: jogo.times[time] + pontos}
-    atualizado = jogo.model_copy(update={"times": novos_times, "status": Status.PLAYING})
-    _jogos[jogo_id] = atualizado
-    return atualizado
-
-
-def finish_jogo(jogo_id: str) -> Jogo:
-    jogo = _jogos.get(jogo_id)
-    if jogo is None:
-        raise KeyError(jogo_id)
-    atualizado = jogo.model_copy(update={"status": Status.FINISHED})
-    _jogos[jogo_id] = atualizado
-    return atualizado
 
 
 def reset() -> None:
