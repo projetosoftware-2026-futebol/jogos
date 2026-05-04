@@ -1,39 +1,48 @@
-"""In-memory store for jogos, exposed as pure-ish functions.
+"""Database store for jogos, exposed as functions.
 
-The state is a single module-level dict. All operations are functions that
-either read from or return new state, keeping route handlers free of
-class-based logic.
+All operations receive a database session explicitly, keeping route handlers
+thin and making persistence independent from FastAPI internals.
 """
-from typing import Dict, List, Optional
+from typing import List, Optional
 from uuid import uuid4
 
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from db_models import JogoModel
 from models import Jogo
 
 
-_jogos: Dict[str, Jogo] = {}
+def to_schema(jogo: JogoModel) -> Jogo:
+    return Jogo(id=jogo.id, times=jogo.times)
 
 
-def list_jogos() -> List[Jogo]:
-    return list(_jogos.values())
+def list_jogos(db: Session) -> List[Jogo]:
+    jogos = db.scalars(select(JogoModel).order_by(JogoModel.id)).all()
+    return [to_schema(jogo) for jogo in jogos]
 
 
-def get_jogo(jogo_id: str) -> Optional[Jogo]:
-    return _jogos.get(jogo_id)
+def get_jogo(db: Session, jogo_id: str) -> Optional[Jogo]:
+    jogo = db.get(JogoModel, jogo_id)
+    return to_schema(jogo) if jogo else None
 
 
-def create_jogo(time_a: str, pontos_a: int, time_b: str, pontos_b: int) -> Jogo:
+def create_jogo(db: Session, time_a: str, pontos_a: int, time_b: str, pontos_b: int) -> Jogo:
     if time_a == time_b:
         raise ValueError("Os dois times devem ser diferentes")
     if pontos_a < 0 or pontos_b < 0:
         raise ValueError("Pontos não podem ser negativos")
 
-    jogo = Jogo(
+    jogo = JogoModel(
         id=str(uuid4()),
         times={time_a: pontos_a, time_b: pontos_b},
     )
-    _jogos[jogo.id] = jogo
-    return jogo
+    db.add(jogo)
+    db.commit()
+    db.refresh(jogo)
+    return to_schema(jogo)
 
 
-def reset() -> None:
-    _jogos.clear()
+def reset(db: Session) -> None:
+    db.query(JogoModel).delete()
+    db.commit()
