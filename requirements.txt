@@ -33,6 +33,8 @@ sentry-sdk==2.58.0
 shellingham==1.5.4
 SQLAlchemy==2.0.49
 PyMySQL==1.1.1
+pytest==8.4.2
+pytest-cov==6.3.0
 starlette==1.0.0
 typer==0.25.0
 typing-inspection==0.4.2
