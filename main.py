@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(title="Jogos API", version="1.0.0", lifespan=lifespan)
 
 
-@app.get("/jogos", response_model=List[Jogo])
+@app.get("/jogos/zambom", response_model=List[Jogo])
 def listar(db: Session = Depends(get_db)) -> List[Jogo]:
     return store.list_jogos(db)
 
